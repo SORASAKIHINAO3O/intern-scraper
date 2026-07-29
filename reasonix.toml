@@ -1,0 +1,2 @@
+[permissions]
+allow = ["Edit", "Bash(cd \"C:\\Users\\sunday\\AppData\\Roaming\\reasonix\\global-workspace\" && python send_weather_email.py)"]

@@ -1,0 +1,4 @@
+interface:
+  display_name: "WPS 表格助手"
+  short_description: "用 openpyxl 一句话生成 / 编辑 / 读取 WPS 表格(.xlsx),写数据、公式、批处理,WPS 与 Excel 通用。"
+  default_prompt: "使用 wps-sheet 生成 WPS/Excel 表格(.xlsx)。优先复用本技能 scripts/xlsx_tools.py 里的 new_workbook / write_table / set_formula / autofit / read_sheet;依赖缺失时先 pip install openpyxl。公式用字符串写(如 =B2*C2);默认简体中文,先确认表结构与目标目录,再生成;完成后告知产物路径并抽查前两行。"

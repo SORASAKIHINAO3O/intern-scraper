@@ -664,6 +664,116 @@ def generate_report(all_positions: list[InternPosition]) -> str:
     return "\n".join(lines)
 
 
+def generate_excel(all_positions: list[InternPosition], filepath: str):
+    """生成格式化的 Excel 报告"""
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    from openpyxl.utils import get_column_letter
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "实习岗位信息"
+
+    # ── 样式定义 ──
+    header_font = Font(name="微软雅黑", bold=True, color="FFFFFF", size=11)
+    header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+    header_align = Alignment(horizontal="center", vertical="center", wrap_text=True)
+
+    company_font = Font(name="微软雅黑", bold=True, size=10)
+    normal_font = Font(name="微软雅黑", size=10)
+    wrap_align = Alignment(vertical="top", wrap_text=True)
+    center_align = Alignment(horizontal="center", vertical="top", wrap_text=True)
+
+    thin_border = Border(
+        left=Side(style="thin", color="D9D9D9"),
+        right=Side(style="thin", color="D9D9D9"),
+        top=Side(style="thin", color="D9D9D9"),
+        bottom=Side(style="thin", color="D9D9D9"),
+    )
+
+    alt_fill = PatternFill(start_color="F2F7FB", end_color="F2F7FB", fill_type="solid")
+
+    # ── 标题行 ──
+    title_row = 1
+    ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=6)
+    title_cell = ws.cell(row=1, column=1)
+    title_cell.value = f"互联网大厂 2027届实习岗位信息汇总（{datetime.now().strftime('%Y-%m-%d')}）"
+    title_cell.font = Font(name="微软雅黑", bold=True, size=14, color="1F3864")
+    title_cell.alignment = Alignment(horizontal="center", vertical="center")
+    ws.row_dimensions[1].height = 36
+
+    # ── 表头 ──
+    headers = ["公司", "岗位/项目名称", "工作地点", "岗位要求（精简）", "薪资范围", "备注"]
+    header_row = 2
+    for col, h in enumerate(headers, 1):
+        cell = ws.cell(row=header_row, column=col, value=h)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = header_align
+        cell.border = thin_border
+    ws.row_dimensions[header_row].height = 28
+
+    # ── 数据行 ──
+    company_order = ["字节跳动", "腾讯", "阿里巴巴", "百度", "美团", "快手", "拼多多", "小红书"]
+    row = header_row + 1
+    is_alt = False
+
+    for company in company_order:
+        positions = [p for p in all_positions if p.company == company]
+        if not positions:
+            cells = [company, "暂未获取到数据", "-", "-", "-", "请访问官网查看"]
+            for col, val in enumerate(cells, 1):
+                cell = ws.cell(row=row, column=col, value=val)
+                cell.font = company_font if col == 1 else normal_font
+                cell.alignment = wrap_align if col in (2, 4, 6) else center_align
+                cell.border = thin_border
+                if is_alt:
+                    cell.fill = alt_fill
+            row += 1
+            is_alt = not is_alt
+            continue
+
+        for idx, pos in enumerate(positions):
+            cells = [
+                company if idx == 0 else "",
+                pos.title,
+                pos.location,
+                (pos.requirement[:80] + "..." if len(pos.requirement) > 80 else pos.requirement),
+                pos.salary,
+                f"{pos.source_note} {'→' + pos.link if pos.link else ''}"
+            ]
+            for col, val in enumerate(cells, 1):
+                # 合并单元格区域只写入左上角，其他跳过
+                if col == 1 and idx > 0 and len(positions) > 1:
+                    continue
+                cell = ws.cell(row=row, column=col, value=val)
+                cell.font = company_font if col == 1 else normal_font
+                cell.alignment = wrap_align if col in (2, 4, 6) else center_align
+                cell.border = thin_border
+                if is_alt:
+                    cell.fill = alt_fill
+            # 合并公司名称单元格（同一公司多行）
+            if idx == 0 and len(positions) > 1:
+                ws.merge_cells(start_row=row, start_column=1, end_row=row + len(positions) - 1, end_column=1)
+            row += 1
+        is_alt = not is_alt
+
+    # ── 列宽 ──
+    col_widths = [14, 42, 24, 50, 10, 40]
+    for i, w in enumerate(col_widths, 1):
+        ws.column_dimensions[get_column_letter(i)].width = w
+
+    # ── 底部说明 ──
+    row += 1
+    note_cell = ws.cell(row=row, column=1)
+    note_cell.value = "报告由自动化脚本自动生成，具体信息以各公司官网为准"
+    note_cell.font = Font(name="微软雅黑", italic=True, size=9, color="999999")
+    ws.merge_cells(start_row=row, start_column=1, end_row=row, end_column=6)
+
+    wb.save(filepath)
+    print(f"\n📊 Excel 报告已保存至: {filepath}")
+
+
 def send_email(report: str, smtp_config: dict = None):
     """通过邮件发送报告"""
     import smtplib
@@ -707,7 +817,8 @@ def send_email(report: str, smtp_config: dict = None):
 
 def main():
     parser = argparse.ArgumentParser(description="互联网大厂实习信息爬虫")
-    parser.add_argument("--output", "-o", type=str, help="输出文件路径")
+    parser.add_argument("--output", "-o", type=str, help="输出文件路径（.md 或 .xlsx）")
+    parser.add_argument("--output-excel", type=str, help="单独指定 Excel 输出路径")
     parser.add_argument("--send-email", action="store_true", help="发送邮件")
     parser.add_argument("--company", "-c", type=str, help="只抓取指定公司（逗号分隔）")
     args = parser.parse_args()
@@ -745,11 +856,18 @@ def main():
     report = generate_report(all_positions)
     print(f"\n{report}")
 
-    # 输出到文件
+    # 输出到文件（根据扩展名选择格式）
     if args.output:
-        with open(args.output, "w", encoding="utf-8") as f:
-            f.write(report)
-        print(f"\n📄 报告已保存至: {args.output}")
+        if args.output.endswith(".xlsx"):
+            generate_excel(all_positions, args.output)
+        else:
+            with open(args.output, "w", encoding="utf-8") as f:
+                f.write(report)
+            print(f"\n📄 报告已保存至: {args.output}")
+
+    # 单独输出 Excel
+    if args.output_excel:
+        generate_excel(all_positions, args.output_excel)
 
     # 发送邮件
     if args.send_email:

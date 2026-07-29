@@ -1,0 +1,4 @@
+interface:
+  display_name: "WPS 演示助手"
+  short_description: "用 python-pptx 一句话生成 WPS 演示(.pptx),封面/目录/要点/章节自动排,WPS 与 PowerPoint 通用。"
+  default_prompt: "使用 wps-slide 生成 WPS/PowerPoint 演示(.pptx)。优先复用本技能 scripts/pptx_tools.py 里的 new_presentation / add_title_slide / add_bullets_slide / add_section_slide;依赖缺失时先 pip install python-pptx。每页标题写结论句、一页一观点,先封面再目录,默认简体中文;先确认主题、受众与目标目录,再生成;完成后告知产物路径与页数。"

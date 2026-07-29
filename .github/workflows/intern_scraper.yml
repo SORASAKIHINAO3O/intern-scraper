@@ -22,7 +22,7 @@ jobs:
 
       - name: 安装依赖
         run: |
-          pip install playwright beautifulsoup4 lxml
+          pip install playwright beautifulsoup4 lxml openpyxl
           python -m playwright install chromium
           python -m playwright install-deps chromium
 
@@ -30,7 +30,7 @@ jobs:
         env:
           PYTHONIOENCODING: utf-8
         run: |
-          python intern_scraper.py --output report.md
+          python intern_scraper.py --output report.md --output-excel report.xlsx
 
       - name: 发送邮件报告
         env:
@@ -46,4 +46,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: intern-report
-          path: report.md
+          path: |
+            report.md
+            report.xlsx
