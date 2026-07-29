@@ -1,0 +1,49 @@
+name: 互联网大厂实习信息日报
+
+on:
+  schedule:
+    # 每天 UTC 1:00 = 北京时间 09:00（中国时区 +8）
+    - cron: '0 1 * * *'
+  workflow_dispatch:  # 支持手动触发
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 安装依赖
+        run: |
+          pip install playwright beautifulsoup4 lxml
+          python -m playwright install chromium
+          python -m playwright install-deps chromium
+
+      - name: 抓取实习信息
+        env:
+          PYTHONIOENCODING: utf-8
+        run: |
+          python intern_scraper.py --output report.md
+
+      - name: 发送邮件报告
+        env:
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          SMTP_TO: ${{ secrets.SMTP_TO }}
+        run: |
+          python intern_scraper.py --send-email --output report.md
+
+      - name: 上传报告作为 Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: intern-report
+          path: report.md
